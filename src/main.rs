@@ -12,11 +12,13 @@ enum Value {
 }
 
 #[derive(Debug)]
-enum Error {
+enum EngineError {
     MissingVariable(String),
-
+    AyyeWrongInstruction,
+    LolAreYouInventingNewType,
+    GeneratingSomethingFromNothingEh,
+    IdkWhatDisIs,
 }
-
 struct Evaluator {
     vars: HashMap<String, Value>,
 }
@@ -28,7 +30,7 @@ impl Evaluator {
         }
     }
 
-    fn evaluate(&mut self, commands: &[Command]) -> Result<Value, Error> {
+    fn evaluate(&mut self, commands: &[Command]) -> Result<Value, EngineError> {
         let mut output = Ok(Value::Nothing);
         for command in commands {
             match command {
@@ -38,7 +40,7 @@ impl Evaluator {
                 Command::GetVar(name) => {
                     match self.vars.get(name){
                         Some(value) =>  output = Ok(value.clone()),
-                        None => return Err(Error::MissingVariable(name.into())),
+                        None => return Err(EngineError::MissingVariable(name.into())),
                     }
                 }
             }
@@ -46,12 +48,59 @@ impl Evaluator {
         output
     }
 }
+
+fn parse_set(input: &[&str]) -> Result<Command, EngineError> {
+    if input.len() != 3 {
+        Err(EngineError::AyyeWrongInstruction)
+    }
+    else {
+        let name = String::from(input[1]);
+        let value = match input[2].parse::<i64>() {
+            Ok(num) => Value::Int(num),
+            Err(_) => return Err(EngineError::LolAreYouInventingNewType)
+        };
+
+        Ok(Command::SetVar(name, value))
+    }
+}
+
+fn parse_get(input: &[&str]) -> Result<Command, EngineError> {
+    if input.len() != 2 {
+        Err(EngineError::AyyeWrongInstruction)
+    }
+    else {
+        let name = String::from(input[1]);
+        Ok(Command::GetVar(name))
+    }
+}
+
+fn parse(input: &str) -> Result<Vec<Command>, EngineError> {
+    // set a 100 
+    // get a
+    
+    let mut output = Vec::new();
+    for line in input.lines() {
+        let command: Vec<_> = line.split_ascii_whitespace().collect();
+
+        match command.get(0) {
+            Some(operator) => {
+                match *operator {
+                    "set" => output.push(parse_set(&command)?),
+                    "get" => output.push(parse_get(&command)?),
+                    _ => return Err(EngineError::IdkWhatDisIs)
+                }},
+            None => return Err(EngineError::IdkWhatDisIs),
+        }
+    }
+    Ok(output)
+}
+
 fn main () {
     
 }
 
 #[test]
-fn test_1 () -> Result<(), Error> {
+fn test_1 () -> Result<(), EngineError> {
     let commands = vec![
         Command::SetVar("a".into(), Value::Int(100)), 
         Command::GetVar("a".into())
@@ -61,6 +110,18 @@ fn test_1 () -> Result<(), Error> {
     let result = evaluator.evaluate(&commands)?;
 
     assert_eq!(result, Value::Int(100));
+
+    Ok(())
+}
+
+#[test]
+fn test_2 () -> Result<(), EngineError> {
+    let input = "set x 30\nget x";
+
+    let commands = parse(input)?;
+    let mut evaluator = Evaluator::new();
+    let result = evaluator.evaluate(&commands)?;
+    assert_eq!(result, Value::Int(30));
 
     Ok(())
 }
