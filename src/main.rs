@@ -1,4 +1,5 @@
 use std::collections::HashMap; 
+use std::fs;
 
 enum Command {
     SetVar(String, Value),
@@ -115,13 +116,25 @@ fn test_1 () -> Result<(), EngineError> {
 }
 
 #[test]
-fn test_2 () -> Result<(), EngineError> {
+fn parse_test () -> Result<(), EngineError> {
     let input = "set x 30\nget x";
 
     let commands = parse(input)?;
     let mut evaluator = Evaluator::new();
     let result = evaluator.evaluate(&commands)?;
     assert_eq!(result, Value::Int(30));
+
+    Ok(())
+}
+
+#[test]
+fn read_parse_test () -> Result<(), EngineError> {
+    let input = fs::read_to_string("file.mad").expect("ouch!");
+
+    let commands = parse(&input)?;
+    let mut evaluator = Evaluator::new();
+    let result = evaluator.evaluate(&commands)?;
+    assert_eq!(result, Value::Int(200));
 
     Ok(())
 }
