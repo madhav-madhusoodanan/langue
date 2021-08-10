@@ -1,5 +1,7 @@
-use std::collections::HashMap; 
+use std::io;
 use std::fs;
+use std::env;
+use std::collections::HashMap; 
 
 enum Command {
     SetVar(String, Value),
@@ -96,8 +98,59 @@ fn parse(input: &str) -> Result<Vec<Command>, EngineError> {
     Ok(output)
 }
 
+fn process(line: &String) -> Result<Value, EngineError> {
+    let commands = parse(&line)?;
+    let mut evaluator = Evaluator::new();
+    let result = evaluator.evaluate(&commands)?;
+    Ok(result)
+}
+
+fn process_realtime(line: &String, evaluator: &mut Evaluator) -> Result<Value, EngineError> {
+    let commands = parse(&line)?;
+    let result = evaluator.evaluate(&commands)?;
+    Ok(result)
+}
+
 fn main () {
-    
+    let args: Vec<String> = env::args()
+                                .enumerate()
+                                .filter(|&(index, _)| index != 0)
+                                .map(|(_, elem)| elem)
+                                .collect();
+    if args.len() != 0 {
+        for file in args{
+
+                let input = fs::read_to_string(&file).expect("ouch!");
+                match process(&input) {
+                    Ok(value) => {
+                        match value {
+                            Value::Int(num) => println!("{}", num),
+                            _ => (),
+                        }
+                    },
+                    Err(_) => {eprintln!("What do you mean to say in {}?\n", file)}
+                }
+        }
+    } else if args.len() == 0 {
+        let mut input = String::new();
+        let mut evaluator = Evaluator::new();
+        let mut result = io::stdin().read_line(&mut input);
+        while !input.contains("exit") {
+            match result {
+                Ok(_) => {
+                    match process_realtime(&input, &mut evaluator) {
+                        Ok(result) =>   match result {
+                            Value::Int(val) => println!(">>>{}\n", val),
+                            _ => print!(""),
+                        },
+                        Err(_) => eprintln!("That's not a good attitude i must say :(\n")
+                    }
+                }
+                Err(_) => eprintln!("Okayy that flew over my head\n")
+            }
+            result = io::stdin().read_line(&mut input);
+        }
+    }
 }
 
 #[test]
